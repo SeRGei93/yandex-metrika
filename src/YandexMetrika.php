@@ -311,15 +311,27 @@ class YandexMetrika
      * @param int $days
      * @param int $maxResult
      */
-    protected function getTestFork($days = 30, $maxResult = 10)
+    protected function getUserParamsPageViews($paramsLevel1 = '', $paramsLevel2 = '', DateTime $startDate, DateTime $endDate, $maxResult = 10)
     {
-        //Вычисляем даты
-        list($startDate, $endDate) = $this->calculateDays($days);
+      $cacheName = md5(serialize('view_page_params'.$startDate->format('Y-m-d').$endDate->format('Y-m-d').$maxResult));
 
-        //Получаем данные
-        $this->getTechPlatformsForPeriod($startDate, $endDate, $maxResult);
+      $urlParams = [
+        'ids'           => $this->counter_id,
+        'oauth_token'   => $this->token,
+        'date1'         => $startDate->format('Y-m-d'),
+        'date2'         => $endDate->format('Y-m-d'),
+        'metrics'       => 'ym:pv:pageviews',
+        'dimensions'    => 'ym:pv:URLHash',
+        'filters'       => "EXISTS(ym:up:paramsLevel1=='$paramsLevel1' AND ym:up:paramsLevel2=='$paramsLevel2')",
+        'limit'         => $maxResult
+      ];
+
+      //Формируем url для запроса
+      $requestUrl = $this->url.'stat/v1/data?'.urldecode(http_build_query($urlParams));
+      // dd($requestUrl);
+      //Запрос данных - возвращает массив или false,если данные не получены
+      $this->data = $this->request($requestUrl, $cacheName);
     }
-
 
     /**
      * Отчет "Технологии - Браузеры" за период, кол-во результатов - $maxResult
@@ -576,7 +588,7 @@ class YandexMetrika
      */
     protected function request($url, $cacheName)
     {
-        return Cache::remember($cacheName, $this->cache, function() use($url){
+        // return Cache::remember($cacheName, $this->cache, function() use($url){
             try
             {
                 $client = new GuzzleClient();
@@ -595,7 +607,7 @@ class YandexMetrika
             }
 
             return $result;
-        });
+        // });
     }
 
 
